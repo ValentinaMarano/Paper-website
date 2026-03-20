@@ -1,5 +1,16 @@
 import streamlit as st
 
+[data-testid="stSidebarNavItems"] li:first-child a span {
+    visibility: hidden;
+    position: relative;
+}
+[data-testid="stSidebarNavItems"] li:first-child a span::after {
+    content: "Home";
+    visibility: visible;
+    position: absolute;
+    left: 0;
+}
+
 st.set_page_config(
     page_title="Organelle Proteomics Atlas",
     page_icon="🧬",
