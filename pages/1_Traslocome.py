@@ -4,8 +4,9 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import umap
+import os
 
-st.set_page_config(page_title="Traslocome", page_icon="🔬", layout="wide")
+st.set_page_config(page_title="Traslocome", layout="wide")
 
 # ── Palette organelli ─────────────────────────────────────────────────────────
 ORGANELLE_COLORS = {
@@ -30,6 +31,76 @@ NUMERIC_COLS = [
     "Lysosome", "Peroxisome", "Golgi apparatus", "LD",
 ]
 
+# ── IF viewer helpers ─────────────────────────────────────────────────────────
+CHANNELS_TRASLOCOME = {
+    "merge":   "Merge",
+    "protein": "Protein",
+    "dsRNA":   "dsRNA",
+}
+
+def find_channel_t(gene, condition, channel):
+    folder = f"data/images_traslocome/{gene}"
+    base   = f"{gene}_{condition}_{channel}"
+    for ext in [".bmp",".png",".jpg",".jpeg",".tif",".tiff"]:
+        p = os.path.join(folder, base + ext)
+        if os.path.exists(p):
+            return p
+    return None
+
+def blend_images_t(paths):
+    from PIL import Image as PILImage
+    imgs = []
+    for p in paths:
+        try:
+            arr = np.array(PILImage.open(p).convert("RGB")).astype(np.float32)
+            imgs.append(arr)
+        except Exception:
+            pass
+    if not imgs:
+        return None
+    h = min(i.shape[0] for i in imgs)
+    w = min(i.shape[1] for i in imgs)
+    imgs = [i[:h,:w] for i in imgs]
+    result = np.ones((h, w, 3), dtype=np.float32)
+    for img_arr in imgs:
+        result *= (1.0 - img_arr / 255.0)
+    blended = ((1.0 - result) * 255).clip(0, 255).astype(np.uint8)
+    from PIL import Image as PILImage
+    return PILImage.fromarray(blended)
+
+def if_viewer_t(gene, condition_label, condition_key):
+    available = {}
+    for ch_key, ch_label in CHANNELS_TRASLOCOME.items():
+        p = find_channel_t(gene, condition_key, ch_key)
+        if p:
+            available[ch_key] = (ch_label, p)
+
+    if not available:
+        st.caption(f"No images available for {condition_label}.")
+        return
+
+    st.markdown(f"**{condition_label}**")
+    selected = {}
+    cols_ch = st.columns(len(available))
+    for i, (ch_key, (ch_label, _)) in enumerate(available.items()):
+        with cols_ch[i]:
+            selected[ch_key] = st.checkbox(
+                ch_label, value=(ch_key == "merge"),
+                key=f"tch_{gene}_{condition_key}_{ch_key}"
+            )
+
+    active_paths  = [available[k][1] for k in available if selected.get(k, False)]
+    active_labels = [available[k][0] for k in available if selected.get(k, False)]
+
+    if not active_paths:
+        st.caption("Select at least one channel.")
+    elif len(active_paths) == 1:
+        st.image(active_paths[0], caption=active_labels[0])
+    else:
+        blended = blend_images_t(active_paths)
+        if blended:
+            st.image(blended, caption=" + ".join(active_labels))
+
 # ── Load & process data ───────────────────────────────────────────────────────
 @st.cache_data
 def load_and_compute_umap():
@@ -39,22 +110,19 @@ def load_and_compute_umap():
     mock = mock.rename(columns={"C: Winner MOCK": "Localization"})
     inf  = inf.rename(columns={"C: Winner INF":  "Localization"})
 
-    # Proteine comuni
     common = list(set(mock["T: T: Genes"]).intersection(set(inf["T: T: Genes"])))
     mock = mock[mock["T: T: Genes"].isin(common)].drop_duplicates("T: T: Genes").set_index("T: T: Genes").loc[common].reset_index()
     inf  = inf[inf["T: T: Genes"].isin(common)].drop_duplicates("T: T: Genes").set_index("T: T: Genes").loc[common].reset_index()
 
-    # Raggruppa categorie rare in "Others"
     rare = ["LD", "Peroxisome", "endosome-vesicle"]
     mock["Localization"] = mock["Localization"].replace(rare, "Others")
     inf["Localization"]  = inf["Localization"].replace(rare, "Others")
 
-    # UMAP su dati combinati per spazio comune
     mock["_cond"] = "MOCK"
     inf["_cond"]  = "INF"
     combined = pd.concat([mock, inf], ignore_index=True)
 
-    num = combined[NUMERIC_COLS].fillna(0).values
+    num     = combined[NUMERIC_COLS].fillna(0).values
     reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=15, min_dist=0.1)
     coords  = reducer.fit_transform(num)
 
@@ -82,24 +150,11 @@ with st.spinner("Computing UMAP (first load may take ~30s)..."):
 with st.sidebar:
     st.header("⚙️ Options")
 
-    view_mode = st.radio(
-        "View mode",
-        ["Side by side", "Animated transition"],
-        index=0,
-    )
+    view_mode = st.radio("View mode", ["Side by side", "Animated transition"], index=0)
+    color_by  = st.radio("Color by", ["MOCK localization", "INF localization"], index=0)
 
-    color_by = st.radio(
-        "Color by",
-        ["MOCK localization", "INF localization"],
-        index=0,
-    )
-
-    organelles = list(ORGANELLE_COLORS.keys())
-    selected_org = st.multiselect(
-        "Highlight organelles",
-        options=organelles,
-        default=organelles,
-    )
+    organelles   = list(ORGANELLE_COLORS.keys())
+    selected_org = st.multiselect("Highlight organelles", options=organelles, default=organelles)
 
     st.divider()
     st.markdown("**Legend**")
@@ -121,6 +176,7 @@ if search:
         row_mock = mock_umap[mock_umap["T: T: Genes"].str.upper() == search].iloc[0]
         row_inf  = inf_umap[inf_umap["T: T: Genes"].str.upper() == search].iloc[0]
 
+        # Info cards
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Gene", row_mock["T: T: Genes"])
         c2.metric("Localization MOCK", row_mock["Localization"])
@@ -131,6 +187,17 @@ if search:
         if "T: T: First Protein Description" in row_mock:
             st.caption(f"📖 {row_mock['T: T: First Protein Description']}")
 
+        # IF viewer — show if folder exists
+        has_if = os.path.isdir(f"data/images_traslocome/{row_mock['T: T: Genes']}")
+        if has_if:
+            st.markdown("#### 🔬 Immunofluorescence")
+            gene_name = row_mock["T: T: Genes"]
+            tab_mock, tab_inf = st.tabs(["🔘 Mock", "🦠 Infected (SARS-CoV-2)"])
+            with tab_mock:
+                if_viewer_t(gene_name, "Mock", "mock")
+            with tab_inf:
+                if_viewer_t(gene_name, "Infected", "inf")
+
 st.divider()
 
 # ── Helper: build scatter trace ───────────────────────────────────────────────
@@ -140,60 +207,39 @@ def make_trace(df, color_col, title, highlight=None):
         subset = df[df[color_col] == org]
         if subset.empty:
             continue
-        is_hl = (highlight is not None) and (subset["T: T: Genes"].str.upper() == highlight.upper()).any()
         traces.append(go.Scatter(
             x=subset["UMAP1"],
             y=subset["UMAP2"],
             mode="markers",
             name=org,
-            marker=dict(
-                color=ORGANELLE_COLORS.get(org, "#adb5bd"),
-                size=4,
-                opacity=0.7,
-                line=dict(width=0),
-            ),
+            marker=dict(color=ORGANELLE_COLORS.get(org, "#adb5bd"), size=4, opacity=0.7, line=dict(width=0)),
             text=subset["T: T: Genes"],
             customdata=subset[[color_col, "T: T: First Protein Description"]].values,
-            hovertemplate=(
-                "<b>%{text}</b><br>"
-                "Localization: %{customdata[0]}<br>"
-                "<i>%{customdata[1]}</i><extra></extra>"
-            ),
-            showlegend=(title == "MOCK"),  # mostra legenda solo una volta
+            hovertemplate="<b>%{text}</b><br>Localization: %{customdata[0]}<br><i>%{customdata[1]}</i><extra></extra>",
+            showlegend=(title == "MOCK"),
         ))
 
-    # Highlight proteina cercata
     if highlight:
         hl = df[df["T: T: Genes"].str.upper() == highlight.upper()]
         if not hl.empty:
             row = hl.iloc[0]
             traces.append(go.Scatter(
-                x=[row["UMAP1"]],
-                y=[row["UMAP2"]],
+                x=[row["UMAP1"]], y=[row["UMAP2"]],
                 mode="markers+text",
                 name=f"★ {highlight}",
-                marker=dict(color="white", size=14, symbol="star",
-                            line=dict(width=1.5, color="black")),
+                marker=dict(color="white", size=14, symbol="star", line=dict(width=1.5, color="black")),
                 text=[row["T: T: Genes"]],
                 textposition="top center",
                 textfont=dict(size=11, color="white"),
-                showlegend=True,
-                hoverinfo="skip",
+                showlegend=True, hoverinfo="skip",
             ))
     return traces
 
-# ── Color column ──────────────────────────────────────────────────────────────
-color_col_mock = "Localization"
-color_col_inf  = "Localization"
-color_col = color_col_mock if color_by == "MOCK localization" else color_col_inf
+color_col = "Localization"
 
 # ── View: Side by side ────────────────────────────────────────────────────────
 if view_mode == "Side by side":
-    fig = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=["MOCK (uninfected)", "INFECTED"],
-        horizontal_spacing=0.05,
-    )
+    fig = make_subplots(rows=1, cols=2, subplot_titles=["MOCK (uninfected)", "INFECTED"], horizontal_spacing=0.05)
 
     for trace in make_trace(mock_umap, color_col, "MOCK", highlight_gene):
         fig.add_trace(trace, row=1, col=1)
@@ -203,40 +249,26 @@ if view_mode == "Side by side":
         fig.add_trace(t, row=1, col=2)
 
     fig.update_layout(
-        plot_bgcolor="#0d1117",
-        paper_bgcolor="#0d1117",
-        font=dict(color="#e6edf3"),
-        height=560,
+        plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+        font=dict(color="#e6edf3"), height=560,
         margin=dict(l=40, r=40, t=60, b=40),
-        legend=dict(
-            orientation="v", x=1.01, y=1,
-            font=dict(size=10),
-            itemsizing="constant",
-        ),
+        legend=dict(orientation="v", x=1.01, y=1, font=dict(size=10), itemsizing="constant"),
         hovermode="closest",
     )
     fig.update_xaxes(showgrid=False, zeroline=False, showticklabels=False)
     fig.update_yaxes(showgrid=False, zeroline=False, showticklabels=False)
     fig.update_annotations(font=dict(size=13, color="#e6edf3"))
-
     st.plotly_chart(fig, use_container_width=True)
 
 # ── View: Animated transition ─────────────────────────────────────────────────
 else:
     st.markdown("Use the **slider** to transition from MOCK to INFECTED.")
-
     alpha = st.slider("MOCK ← → INFECTED", 0.0, 1.0, 0.0, 0.01)
 
-    # Interpola posizioni
     anim_df = mock_umap.copy()
     anim_df["UMAP1"] = (1 - alpha) * mock_umap["UMAP1"].values + alpha * inf_umap["UMAP1"].values
     anim_df["UMAP2"] = (1 - alpha) * mock_umap["UMAP2"].values + alpha * inf_umap["UMAP2"].values
-    # Localizzazione: cambia a INF quando alpha > 0.5
-    anim_df["Localization"] = np.where(
-        alpha > 0.5,
-        inf_umap["Localization"].values,
-        mock_umap["Localization"].values,
-    )
+    anim_df["Localization"] = np.where(alpha > 0.5, inf_umap["Localization"].values, mock_umap["Localization"].values)
 
     fig2 = go.Figure()
     for trace in make_trace(anim_df, "Localization", "ANIM", highlight_gene):
@@ -245,17 +277,14 @@ else:
     label = f"{'MOCK' if alpha < 0.5 else 'INFECTED'} ({int(alpha*100)}%)"
     fig2.update_layout(
         title=dict(text=label, font=dict(size=14, color="#e6edf3")),
-        plot_bgcolor="#0d1117",
-        paper_bgcolor="#0d1117",
-        font=dict(color="#e6edf3"),
-        height=560,
+        plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+        font=dict(color="#e6edf3"), height=560,
         margin=dict(l=40, r=160, t=60, b=40),
         legend=dict(orientation="v", x=1.01, y=1, font=dict(size=10), itemsizing="constant"),
         hovermode="closest",
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
     )
-
     st.plotly_chart(fig2, use_container_width=True)
 
 # ── Stats ─────────────────────────────────────────────────────────────────────

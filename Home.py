@@ -176,10 +176,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Figure ────────────────────────────────────────────────────────────────────
+# Detect dark/light mode
+is_dark = st.get_option("theme.base") != "light"
+fig_path = "data/figure_home_dark.png" if is_dark else "data/figure_home_light.png"
+
 st.image(
-    "data/figure_home.jpeg",
+    fig_path,
     caption="Experimental strategy: organelle fractionation + LC-MS/MS + Protein Correlation Profiling",
-    use_column_width=True,
+    use_column_width="auto",
 )
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
