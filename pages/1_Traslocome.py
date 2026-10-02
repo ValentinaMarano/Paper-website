@@ -8,6 +8,7 @@ import os
 
 st.set_page_config(page_title="Traslocome", layout="wide")
 
+
 # ── Palette organelli ─────────────────────────────────────────────────────────
 ORGANELLE_COLORS = {
     "ER":               "#4e9af1",
@@ -118,6 +119,9 @@ def load_and_compute_umap():
     mock["Localization"] = mock["Localization"].replace(rare, "Others")
     inf["Localization"]  = inf["Localization"].replace(rare, "Others")
 
+    mock["T: T: Genes"] = mock["T: T: Genes"].astype(str).str.split(";").str[0].str.strip()
+    inf["T: T: Genes"]  = inf["T: T: Genes"].astype(str).str.split(";").str[0].str.strip()
+
     mock["_cond"] = "MOCK"
     inf["_cond"]  = "INF"
     combined = pd.concat([mock, inf], ignore_index=True)
@@ -135,7 +139,7 @@ def load_and_compute_umap():
     return mock_umap, inf_umap, common
 
 # ── UI ────────────────────────────────────────────────────────────────────────
-st.title("🔬 Traslocome")
+st.title("Traslocome")
 st.markdown(
     "Spatial reorganization of the host proteome upon coronavirus infection. "
     "Each dot is a protein, colored by its predicted organelle localization. "
@@ -146,25 +150,54 @@ st.divider()
 with st.spinner("Computing UMAP (first load may take ~30s)..."):
     mock_umap, inf_umap, common_genes = load_and_compute_umap()
 
+st.set_page_config(page_title="Traslocome", layout="wide")
+
+st.html("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
+
+.stMarkdown p, .stMarkdown span, .stMarkdown li,
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stText"] p,
+.stSelectbox label, .stRadio label,
+.stSidebar .stMarkdown p {
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+[data-testid="stSidebar"] {
+    min-width: 200px !important;
+    max-width: 250px !important;
+}
+
+[data-testid="stSidebar"] * {
+    font-size: 0.85rem !important;
+}
+</style>
+""")
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.header("⚙️ Options")
+    st.header(" Options")
 
     view_mode = st.radio("View mode", ["Side by side", "Animated transition"], index=0)
-    color_by  = st.radio("Color by", ["MOCK localization", "INF localization"], index=0)
 
     organelles   = list(ORGANELLE_COLORS.keys())
     selected_org = st.multiselect("Highlight organelles", options=organelles, default=organelles)
 
-    st.divider()
-    st.markdown("**Legend**")
-    for org, col in ORGANELLE_COLORS.items():
-        if org in selected_org:
-            st.markdown(f"<span style='color:{col}'>■</span> {org}", unsafe_allow_html=True)
-
+    
 # ── Find your protein ─────────────────────────────────────────────────────────
-st.subheader("🔍 Find your protein")
-search = st.text_input("Type a gene name (e.g. ACTB, VIM, EGFR...)", "").strip().upper()
+st.subheader(" Find your protein")
+gene_list = sorted(mock_umap["T: T: Genes"].dropna().unique().tolist())
+
+search = st.selectbox(
+    "Type a gene name (e.g. PCID2, ELAC2...)",
+    options=[""] + gene_list,
+    index=0,
+    placeholder="e.g. ACTB, VIM, EGFR...",
+)
+search = search.strip().upper() if search else ""
 
 highlight_gene = None
 if search:
@@ -182,17 +215,17 @@ if search:
         c2.metric("Localization MOCK", row_mock["Localization"])
         c3.metric("Localization INF",  row_inf["Localization"])
         relocated = row_mock["Localization"] != row_inf["Localization"]
-        c4.metric("Relocalized?", "✅ YES" if relocated else "➖ NO")
+        c4.metric("Relocalized?", " YES" if relocated else "➖ NO")
 
         if "T: T: First Protein Description" in row_mock:
-            st.caption(f"📖 {row_mock['T: T: First Protein Description']}")
+            st.caption(f" {row_mock['T: T: First Protein Description']}")
 
         # IF viewer — show if folder exists
         has_if = os.path.isdir(f"data/images_traslocome/{row_mock['T: T: Genes']}")
         if has_if:
-            st.markdown("#### 🔬 Immunofluorescence")
+            st.markdown("#### Immunofluorescence")
             gene_name = row_mock["T: T: Genes"]
-            tab_mock, tab_inf = st.tabs(["🔘 Mock", "🦠 Infected (SARS-CoV-2)"])
+            tab_mock, tab_inf = st.tabs(["Mock", "Infected (SARS-CoV-2)"])
             with tab_mock:
                 if_viewer_t(gene_name, "Mock", "mock")
             with tab_inf:
@@ -249,15 +282,15 @@ if view_mode == "Side by side":
         fig.add_trace(t, row=1, col=2)
 
     fig.update_layout(
-        plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
-        font=dict(color="#e6edf3"), height=560,
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#1a055f"), height=560,
         margin=dict(l=40, r=40, t=60, b=40),
-        legend=dict(orientation="v", x=1.01, y=1, font=dict(size=10), itemsizing="constant"),
+        legend=dict(orientation="v", x=1.01, y=1, font=dict(size=13), itemsizing="constant"),
         hovermode="closest",
     )
     fig.update_xaxes(showgrid=False, zeroline=False, showticklabels=False)
     fig.update_yaxes(showgrid=False, zeroline=False, showticklabels=False)
-    fig.update_annotations(font=dict(size=13, color="#e6edf3"))
+    fig.update_annotations(font=dict(size=13, color="#666666"))
     st.plotly_chart(fig, use_container_width=True)
 
 # ── View: Animated transition ─────────────────────────────────────────────────
@@ -277,7 +310,7 @@ else:
     label = f"{'MOCK' if alpha < 0.5 else 'INFECTED'} ({int(alpha*100)}%)"
     fig2.update_layout(
         title=dict(text=label, font=dict(size=14, color="#e6edf3")),
-        plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#e6edf3"), height=560,
         margin=dict(l=40, r=160, t=60, b=40),
         legend=dict(orientation="v", x=1.01, y=1, font=dict(size=10), itemsizing="constant"),
@@ -289,7 +322,7 @@ else:
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
 st.divider()
-with st.expander("📊 Localization statistics"):
+with st.expander("No. of predicted proteins/subcellular compartments"):
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**MOCK**")

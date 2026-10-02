@@ -17,7 +17,7 @@ st.markdown(f"""
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
 html, body, [class*="css"] {{ font-family: 'DM Sans', sans-serif; }}
 .section-title {{
-    font-family: 'DM Serif Display', serif;
+    font-family: 'DM Sans', serif;
     font-size: 1.4rem;
     margin-bottom: 0.5rem;
     margin-top: 1.5rem;
@@ -54,6 +54,20 @@ html, body, [class*="css"] {{ font-family: 'DM Sans', sans-serif; }}
 </style>
 """, unsafe_allow_html=True)
 
+st.html("""
+<style>
+.stMarkdown p, .stMarkdown span, .stMarkdown li,
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stText"] p,
+.stSelectbox label, .stRadio label,
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', sans-serif !important;
+}
+</style>
+""")
+
 # ── Load data ─────────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
@@ -78,7 +92,7 @@ def load_data():
     ctrl_inf_r  = inf_raw[inf_raw["Gene"] == "INF"]["Mean_Reinfection"].mean()
     ctrl_mock_r = inf_raw[inf_raw["Gene"] == "MOCK"]["Mean_Reinfection"].mean()
 
-    controls = ["MOCK", "INF", "PLK", "VMP1", "EMPTY"]
+    controls = ["MOCK", "INF", "PLK", "VMP1", "EMPTY", "ACE2 (ESTERNO)", "NT (ESTERNO)"]
     gene_df = inf_raw[~inf_raw["Gene"].isin(controls)].groupby("Gene").agg(
         Mean_Infection   = ("Mean_Infection",   "mean"),
         Mean_Reinfection = ("Mean_Reinfection", "mean"),
@@ -157,7 +171,7 @@ VIRUS_COLORS = {
 }
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.title("🔭 Phenotypic Screen")
+st.title("Phenotypic Screen")
 st.markdown("""
 From the **773 proteins** that relocalize upon HCoV-OC43 infection, we selected
 **166 candidates** based on functional criteria and performed a targeted siRNA screen
@@ -170,23 +184,24 @@ st.divider()
 # ── Stats ─────────────────────────────────────────────────────────────────────
 crit_counts = {col: int(gene_df[col].sum()) for col in criteria_cols}
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Candidates screened", len(gene_df))
+c1.metric("Candidates screened", "166")
 c2.metric("Druggable targets", crit_counts["Druggable"])
 c3.metric("New interactors post-infection", crit_counts["New Interactions Post-Translocation"])
-c4.metric("Tested against arboviruses", len(arbo_df))
+c4.metric("Tested against arboviruses", "22")
 
-badges = "".join([f'<span class="badge badge-{color}">{col} ({crit_counts[col]})</span>'
-                  for col, color in zip(criteria_cols, badge_colors)])
-st.markdown(f"**Selection criteria:** {badges}", unsafe_allow_html=True)
-st.divider()
 
 # ── Find your protein ─────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">🔍 Find your protein</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Find your protein</div>', unsafe_allow_html=True)
 
-search = st.text_input(
-    "Search by gene name (e.g. ACE2, NAPA, RND3...)",
-    placeholder="Type a gene name..."
-).strip().upper()
+gene_list = sorted(gene_df["Gene"].dropna().unique().tolist())
+
+search = st.selectbox(
+    "Search by gene name (e.g. NAPA)",
+    options=[""] + gene_list,
+    index=0,
+    placeholder="e.g. NAPA, RND3, UBIAD1...",
+)
+search = search.strip().upper() if search else ""
 
 readout = st.radio("SARS-CoV-2 readout", ["Infection", "Reinfection"], horizontal=True)
 
@@ -292,7 +307,7 @@ if search:
                               annotation_text="Mock ctrl", annotation_position="right")
             fig_bar.update_layout(
                 title=dict(text=f"SARS-CoV-2 {readout} — {row['Gene']}", font=dict(size=12)),
-                plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#e6edf3"), height=260,
                 margin=dict(l=40, r=80, t=40, b=30),
                 yaxis=dict(title="Normalized infection", gridcolor="#21262d", zerolinecolor="#484f58"),
@@ -301,7 +316,7 @@ if search:
             st.plotly_chart(fig_bar, use_container_width=True)
 
             # Arbovirus bar chart per protein
-            st.markdown('<div class="section-title">🌍 Arbovirus screen</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title"> Arbovirus screen</div>', unsafe_allow_html=True)
             if has_arbo:
                 st.caption("Normalized infection upon siRNA knockdown across a panel of arboviruses (4 replicates each).")
                 ar = arbo_row.iloc[0]
@@ -323,7 +338,7 @@ if search:
                 fig_arbo.add_hline(y=0.5, line_dash="dot", line_color=TEAL,
                                    annotation_text="0.5×", annotation_position="right")
                 fig_arbo.update_layout(
-                    plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#e6edf3"), height=280,
                     margin=dict(l=40, r=80, t=20, b=40),
                     yaxis=dict(title="Normalized infection", gridcolor="#21262d", zerolinecolor="#484f58"),
@@ -402,7 +417,7 @@ if search:
 
 else:
     # ── Overview barplot ──────────────────────────────────────────────────────
-    st.markdown('<div class="section-title">📊 Overview — all screened proteins</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">All screened proteins</div>', unsafe_allow_html=True)
 
     y_col   = "Infection_norm" if readout == "Infection" else "Reinfection_norm"
     y_label = "Normalized Infection" if readout == "Infection" else "Normalized Reinfection"
@@ -421,7 +436,7 @@ else:
     fig.add_hline(y=1.5, line_dash="dot", line_color=ORANGE, annotation_text="1.5×", annotation_position="right")
     fig.update_layout(
         xaxis_title="Gene", yaxis_title=y_label,
-        plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#e6edf3"), height=500,
         margin=dict(l=60, r=80, t=30, b=80),
         xaxis=dict(gridcolor="#21262d", tickangle=-45, tickfont=dict(size=8)),
@@ -436,15 +451,15 @@ else:
     <span class="badge badge-grey">⚪ No significant effect</span>
     """, unsafe_allow_html=True)
 
-    with st.expander("📋 Show full table"):
+    with st.expander(" Show full table"):
         show_cols = ["Gene","Mean_Infection","Infection_norm","Mean_Reinfection","Reinfection_norm"] + criteria_cols
         st.dataframe(plot_df[[c for c in show_cols if c in gene_df.columns]].reset_index(drop=True),
                      use_container_width=True, hide_index=True)
 
     # ── Arbovirus heatmap ─────────────────────────────────────────────────────
     st.divider()
-    st.markdown('<div class="section-title">🌍 Arbovirus screen overview</div>', unsafe_allow_html=True)
-    st.caption(f"{len(arbo_df)} proteins tested across 5 arboviruses · values normalized to infected control")
+    st.markdown('<div class="section-title"> Arbovirus screen overview</div>', unsafe_allow_html=True)
+    st.caption(f"22 proteins tested across 5 arboviruses · values normalized to infected control")
 
     # Build matrix: genes x viruses (+ SARS-CoV-2)
     heatmap_df = arbo_df[["Gene"]].copy()
@@ -476,26 +491,27 @@ else:
         zmin=0.0,
         zmax=2.0,
         colorbar=dict(
-            title=dict(text="Normalized<br>infection", font=dict(size=10, color="#e6edf3")),
-            tickfont=dict(color="#e6edf3", size=9),
+            title=dict(text="Normalized<br>infection", font=dict(size=13, color="#696666", )),
+            tickfont=dict(color="#696666", size=13),
             thickness=12,
             len=0.6,
             tickvals=[0, 0.5, 1.0, 1.5, 2.0],
             ticktext=["0", "0.5", "1.0", "1.5", "≥2.0"],
         ),
         hovertemplate="<b>%{y}</b> — %{x}<br>Value: %{z:.3f}<extra></extra>",
-        xgap=2,
-        ygap=1,
+        xgap=3,
+        ygap=2,
     ))
 
     fig_heat.update_layout(
-        plot_bgcolor="#0d1117",
-        paper_bgcolor="#0d1117",
-        font=dict(color="#e6edf3"),
-        height=max(400, len(genes) * 22 + 100),
-        margin=dict(l=80, r=100, t=30, b=60),
-        xaxis=dict(side="top", tickfont=dict(size=10), tickangle=-30),
-        yaxis=dict(tickfont=dict(size=9), autorange="reversed"),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#1a1a1a"),
+        height=max(200, len(genes) * 14 + 100),
+        margin=dict(l=60, r=100, t=80, b=40),
+        xaxis=dict(side="top", tickfont=dict(size=15), tickangle=-45),
+        yaxis=dict(tickfont=dict(size=13), autorange="reversed"),
+        width=600,
     )
 
-    st.plotly_chart(fig_heat, use_container_width=True)
+    st.plotly_chart(fig_heat, use_container_width=False)

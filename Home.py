@@ -26,7 +26,7 @@ html, body, [class*="css"] {{
 }}
 
 .hero-title {{
-    font-family: 'DM Serif Display', serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: clamp(2rem, 5vw, 3.2rem);
     line-height: 1.15;
     margin-bottom: 0.3rem;
@@ -36,7 +36,7 @@ html, body, [class*="css"] {{
 .hero-title span.orange {{ color: {ORANGE}; }}
 
 .hero-sub {{
-    font-size: 1.05rem;
+    font-size: 1.25rem;
     font-weight: 300;
     opacity: 0.75;
     margin-bottom: 1.8rem;
@@ -70,7 +70,7 @@ html, body, [class*="css"] {{
 }}
 .stat-card.orange {{ border-left-color: {ORANGE}; background: {ORANGE}0D; }}
 .stat-number {{
-    font-family: 'DM Serif Display', serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: 2.4rem;
     color: {TEAL};
     line-height: 1;
@@ -86,7 +86,7 @@ html, body, [class*="css"] {{
 }}
 
 .section-title {{
-    font-family: 'DM Serif Display', serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: 1.5rem;
     margin-bottom: 0.8rem;
     margin-top: 2.5rem;
@@ -94,7 +94,7 @@ html, body, [class*="css"] {{
 
 .nav-grid {{
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 16px;
     margin-top: 1rem;
 }}
@@ -110,14 +110,14 @@ html, body, [class*="css"] {{
     margin-bottom: 4px;
     color: {TEAL};
 }}
-.nav-card-desc  {{ font-size: 0.85rem; opacity: 0.65; line-height: 1.5; }}
+.nav-card-desc  {{ font-size: 0.9rem; opacity: 0.65; line-height: 1.5; }}
 
 .abstract-box {{
     border-left: 3px solid {TEAL};
     padding: 16px 22px;
     border-radius: 0 10px 10px 0;
     background: {TEAL}08;
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     line-height: 1.75;
     opacity: 0.9;
     margin-top: 1rem;
@@ -152,38 +152,33 @@ html, body, [class*="css"] {{
 # ── Hero ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hero-title">
-    An organelle-resolved<br>
-    <span class="teal">proteomics atlas</span> reveals<br>
-    host factors for <span class="orange">coronavirus</span> infection
+    Spatial proteomics resolves <br>
+    <span class="teal"> virus-host  </span> interaction at <br>
+     <span class="orange">sub-organelle </span> resolution <br>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <div class="hero-sub">
-    A spatial proteomics resource mapping the subcellular reorganisation of human cells
-    during β-coronavirus HCoV-OC43 infection.
+    A spatial proteomics resource to map virus-host interactions and identify replication-associated host factors
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("""
 <span class="pill pill-teal">Organelle Proteomics</span>
-<span class="pill pill-teal">HCoV-OC43</span>
 <span class="pill pill-teal">Protein Correlation Profiling</span>
 <span class="pill pill-orange">SARS-CoV-2</span>
-<span class="pill pill-orange">siRNA screen</span>
-<span class="pill pill-grey">Mass Spectrometry</span>
-<span class="pill pill-grey">UMAP</span>
+<span class="pill pill-orange">HCoV-OC43</span>
+<span class="pill pill-orange">Arbovirus</span>
 """, unsafe_allow_html=True)
 
 # ── Figure ────────────────────────────────────────────────────────────────────
-# Detect dark/light mode
-is_dark = st.get_option("theme.base") != "light"
-fig_path = "data/figure_home_dark.png" if is_dark else "data/figure_home_light.png"
+fig_path = "data/figure_home_light.png"
 
 st.image(
     fig_path,
     caption="Experimental strategy: organelle fractionation + LC-MS/MS + Protein Correlation Profiling",
-    use_column_width="auto",
+    use_container_width=True,
 )
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
@@ -198,8 +193,8 @@ st.markdown("""
         <div class="stat-label">Candidates confirmed as dependency or restriction factors</div>
     </div>
     <div class="stat-card">
-        <div class="stat-number">224</div>
-        <div class="stat-label">Host proteins enriched near the viral Replicome</div>
+        <div class="stat-number">197</div>
+        <div class="stat-label">Host proteins enriched near viral replication organelle</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -209,45 +204,47 @@ st.markdown('<div class="section-title">About this study</div>', unsafe_allow_ht
 
 with st.expander("Read abstract", expanded=False):
     st.markdown("""
-    <div class="abstract-box">
-    Human Coronaviruses (HCoVs) are enveloped, positive-sense single-stranded RNA viruses capable of
-    infecting birds, mammals, and humans. A key aspect of coronavirus replication is the formation of
-    specialised compartments called viral replication organelles (ROs), primarily composed of
-    double-membrane vesicles (DMVs) that originate from the endoplasmic reticulum (ER).
-    <br><br>
-    By combining density gradient fractionation, mass spectrometry, and computational classification
-    based on Protein Correlation Profiling (PCP), we mapped the subcellular landscape of human cells
-    during infection with HCoV-OC43. We identified <strong>773 host proteins</strong> that dynamically
-    relocate upon infection — most of which would not have been detected by conventional whole-proteome
-    analysis. A customised siRNA screen with SARS-CoV-2 revealed that over a third function as
-    dependency or restriction factors.
-    <br><br>
-    Furthermore, by analysing the distribution of non-structural viral proteins enriched in the ER,
-    we derived a novel profile termed the <strong>Replicome</strong> — a specific suborganelle ER domain
-    reflecting the viral replication organelle in both protein composition and molecular function.
+    <div style="text-align: justify;">
+    Viruses reshape host cell organization to support their replication. Here, we combined
+organelle-resolved spatial proteomics with machine learning and functional screening to map
+host protein redistribution during coronavirus infection through two complementary strategies.
+
+In the first arm, we identified <strong>773 proteins</strong> that relocalize upon HCoV-OC43
+infection, the <strong>translocome</strong>, largely invisible to conventional proteomics.
+Functional screening of 166 candidates revealed <strong>58 conserved host factors</strong>
+that promote or restrict infection of SARS-CoV-2 and other RNA viruses.
+
+In the second arm, we used viral replication proteins as endogenous spatial landmarks to define
+a replication-associated sub-organellar signature, the <strong>Replicome</strong>, identifying
+<strong>197 host proteins</strong> enriched at coronavirus replication sites. Selected lipid
+metabolism enzymes were functionally validated as restriction or dependency factors.
     </div>
     """, unsafe_allow_html=True)
 
 # ── Explore ───────────────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">Explore the data</div>', unsafe_allow_html=True)
-
+st.markdown('<div class="section-title">Explore the data and <span style="color: #E66F02;">find your protein of interest:</span></div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="nav-grid">
     <div class="nav-card">
-        <div class="nav-card-icon">🔬</div>
         <div class="nav-card-title">Traslocome</div>
         <div class="nav-card-desc">
             Explore the 773 host proteins that relocalize upon HCoV-OC43 infection.
-            Visualise the UMAP of the subcellular proteome in mock vs infected conditions
-            and search for your protein of interest.
+            Visualise the subcellular proteome in mock vs infected conditions.
         </div>
     </div>
     <div class="nav-card">
-        <div class="nav-card-icon">🧫</div>
+        <div class="nav-card-title">Screen</div>
+        <div class="nav-card-desc">
+            Uncover the functional role of 166 translocating proteins in viral infection.
+            Browse siRNA knockdown results across SARS-CoV-2 and five arboviruses,
+            with immunofluorescence images for selected candidates.
+        </div>
+    </div>
+    <div class="nav-card">
         <div class="nav-card-title">Replicome</div>
         <div class="nav-card-desc">
-            Discover the 224 host proteins spatially enriched near the viral replication organelle.
-            Explore their proximity to the Replicome and the ER, and search for your protein of interest.
+            Discover the 197 host proteins spatially enriched near the viral replication organelle.
+            Explore their proximity to the Replicome and the ER.
         </div>
     </div>
 </div>
@@ -257,10 +254,10 @@ st.markdown("""
 st.markdown('<div class="section-title">Publication</div>', unsafe_allow_html=True)
 
 st.markdown(f"""
-<div style="padding: 16px 20px; border-radius: 10px; border: 1px solid #88888833; font-size: 0.9rem; line-height: 1.7;">
-    <strong>An organelle-resolved proteomics atlas reveals host factors required for coronavirus infection</strong>
-    <span class="coming-soon">⏳ Coming soon</span><br>
-    <span style="opacity:0.6;">Valentina Marano · Cortese Lab · TIGEM, Naples</span>
+<div style="padding: 16px 20px; border-radius: 10px; border: 1px solid #88888833; font-size: 1rem; line-height: 1.7;">
+    <strong>Spatial proteomics resolves virus-host interaction at sub-organelle resolution</strong>
+    <span class="coming-soon"> Submitted</span><br>
+    <span style="opacity:0.6;">V. Marano et al. · Cortese Lab · TIGEM</span>
 </div>
 """, unsafe_allow_html=True)
 

@@ -4,7 +4,7 @@ import numpy as np
 import plotly.graph_objects as go
 import os
 
-st.set_page_config(page_title="Replicome", page_icon="🧫", layout="wide")
+st.set_page_config(page_title="Replicome", layout="wide")
 
 TEAL   = "#0D869B"
 ORANGE = "#E66F02"
@@ -14,7 +14,7 @@ st.markdown(f"""
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap');
 html, body, [class*="css"] {{ font-family: 'DM Sans', sans-serif; }}
 .section-title {{
-    font-family: 'DM Serif Display', serif;
+    font-family: 'DM Sans', serif;
     font-size: 1.4rem;
     margin-bottom: 0.5rem;
     margin-top: 1.5rem;
@@ -57,6 +57,20 @@ html, body, [class*="css"] {{ font-family: 'DM Sans', sans-serif; }}
 }}
 </style>
 """, unsafe_allow_html=True)
+
+st.html("""
+<style>
+.stMarkdown p, .stMarkdown span, .stMarkdown li,
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stText"] p,
+.stSelectbox label, .stRadio label,
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', sans-serif !important;
+}
+</style>
+""")
 
 # ── Load data ─────────────────────────────────────────────────────────────────
 @st.cache_data
@@ -197,10 +211,10 @@ def get_uniprot_info(gene_name):
     return None, None
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.title("🧫 Replicome")
+st.title("Replicome")
 st.markdown("""
 During coronavirus infection, non-structural viral proteins accumulate in a specific
-suborganellar ER domain that we term the **Replicome** — a proxy for the viral replication
+suborganellar ER domain that we term the **Replicome**, a proxy for the viral replication
 organelle (RO). By comparing the spatial profiles of host proteins to this viral signature,
 we identified host factors enriched near the site of viral replication.
 
@@ -213,16 +227,21 @@ st.divider()
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Total proteins detected", "6,149")
 c2.metric("Close to Replicome", "280")
-c3.metric("Final selected hits", "210")
+c3.metric("Final selected hits", "197")
 st.divider()
 
 # ── Find your protein ─────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">🔍 Find your protein</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title"> Find your protein</div>', unsafe_allow_html=True)
 
-search = st.text_input(
-    "Search by gene name (e.g. DHCR24, TMX2, EGFR...)",
-    placeholder="Type a gene name...",
-).strip().upper()
+gene_list = sorted(df["Gene"].dropna().unique().tolist())
+
+search = st.selectbox(
+    "Search by gene name (e.g. DHCR24)",
+    options=[""] + gene_list,
+    index=0,
+    placeholder="e.g. DHCR24, TMX2, EGFR...",
+)
+search = search.strip().upper() if search else ""
 
 if search:
     match = df[df["Gene"].str.upper() == search]
@@ -261,7 +280,7 @@ if search:
             # UniProt info
             uniprot_name, uniprot_function = get_uniprot_info(row["Gene"])
             if uniprot_function:
-                with st.expander("📖 Protein function (UniProt)"):
+                with st.expander("Protein function (UniProt)"):
                     if uniprot_name:
                         st.caption(f"**{uniprot_name}**")
                     st.write(uniprot_function)
@@ -294,7 +313,7 @@ if search:
             st.markdown('</div>', unsafe_allow_html=True)
 
             # Scatter position
-            st.markdown('<div class="section-title">📍 Position in the dataset</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title"> Position in the dataset</div>', unsafe_allow_html=True)
             fig = go.Figure()
             for label, color, opacity, size in [
                 ("Close to ER",        "#8b949e", 0.3, 3),
@@ -320,7 +339,7 @@ if search:
                           line=dict(color="#3fb950", dash="dash", width=1.5))
             fig.update_layout(
                 xaxis_title="Distance from Replicome", yaxis_title="Distance from ER",
-                plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#e6edf3"), height=380,
                 margin=dict(l=60, r=30, t=30, b=60),
                 xaxis=dict(gridcolor="#21262d", zerolinecolor="#484f58"),
@@ -332,9 +351,9 @@ if search:
         # Right column: IF viewer with mock vs infected
         if has_if:
             with col_img:
-                st.markdown('<div class="section-title">🔬 Immunofluorescence</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title"> Immunofluorescence</div>', unsafe_allow_html=True)
 
-                tab_mock, tab_inf = st.tabs(["🔘 Mock", "🦠 Infected (SARS-CoV-2)"])
+                tab_mock, tab_inf = st.tabs([" Mock", " Infected (SARS-CoV-2)"])
                 with tab_mock:
                     if_viewer(row["Gene"], "Mock", "mock")
                 with tab_inf:
@@ -342,7 +361,7 @@ if search:
 
 else:
     # Browse all proteins
-    st.markdown('<div class="section-title">📊 Browse all proteins</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title"> Browse all proteins</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
