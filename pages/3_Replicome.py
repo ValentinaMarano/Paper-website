@@ -104,7 +104,7 @@ def load_data():
         rep_sorted = rep.sort_values("Delta Distance", ascending=False)
         rep_sorted["Delta Distance"] = pd.to_numeric(rep_sorted["Delta Distance"], errors="coerce")
         rep_sorted = rep_sorted.dropna(subset=["Delta Distance"])
-        rep_sorted["Quantile"] = pd.qcut(rep_sorted["Delta Distance"].astype(float), q=4, labels=["Q1","Q2","Q3","Q4"])
+        rep_sorted["Quantile"] = pd.qcut(rep_sorted["Delta Distance"].astype(float), q=4, labels=["Q1","Q2","Q3","Q4"], duplicates="drop")
         df = df.merge(rep_sorted[["Gene","Quantile"]], on="Gene", how="left")
     df["Final Selected"] = df["Quantile"].isin(["Q2","Q3","Q4"])
     return df
