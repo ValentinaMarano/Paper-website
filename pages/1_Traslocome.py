@@ -192,7 +192,7 @@ st.subheader(" Find your protein")
 gene_list = sorted(mock_umap["T: T: Genes"].dropna().unique().tolist())
 
 search = st.selectbox(
-    "Type a gene name (e.g. PCID2, ELAC2...)",
+    "Type a gene name",
     options=[""] + gene_list,
     index=0,
     placeholder="e.g. ACTB, VIM, EGFR...",

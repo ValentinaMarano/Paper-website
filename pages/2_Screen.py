@@ -196,7 +196,7 @@ st.markdown('<div class="section-title">Find your protein</div>', unsafe_allow_h
 gene_list = sorted(gene_df["Gene"].dropna().unique().tolist())
 
 search = st.selectbox(
-    "Search by gene name (e.g. NAPA)",
+    "Search by gene name",
     options=[""] + gene_list,
     index=0,
     placeholder="e.g. NAPA, RND3, UBIAD1...",
